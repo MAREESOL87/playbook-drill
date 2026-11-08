@@ -1,0 +1,24 @@
+[Unit]
+Description=Playbook Drill, API de synchronisation
+After=network.target
+
+[Service]
+Type=simple
+User=playbook-drill
+Group=playbook-drill
+WorkingDirectory=/opt/playbook-drill
+Environment=PD_PORT=8789
+# 0.0.0.0 : joignable depuis le conteneur Caddy (réseau Docker). Le pare-feu GCE bloque 8789 depuis l'extérieur.
+Environment=PD_HOST=0.0.0.0
+# 1 : le serveur sert aussi public/ (Caddy fait alors simple reverse proxy). 0 si nginx sert le statique.
+Environment=PD_STATIC=1
+ExecStart=/usr/bin/python3 /opt/playbook-drill/server/server.py
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/playbook-drill/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

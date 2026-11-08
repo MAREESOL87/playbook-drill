@@ -1,0 +1,10 @@
+# À ajouter au Caddyfile du conteneur Caddy existant (projet compose « deploy »).
+# Remplace 172.18.0.1 par la passerelle du réseau Docker de Caddy :
+#   docker network inspect deploy_default --format '{{(index .IPAM.Config 0).Gateway}}'
+# Puis : docker exec deploy-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+# Caddy obtient le certificat HTTPS tout seul dès que le DNS « ea » pointe vers la VM.
+
+drill.eldwin-uk.com {
+    encode gzip
+    reverse_proxy 172.18.0.1:8789
+}

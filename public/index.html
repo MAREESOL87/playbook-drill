@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playbook Drill</title>
+<meta name="theme-color" content="#0e7268">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Playbook">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Même carnet qu'EA Trainer : papier froid, sarcelle, ambre pour ce qui est à revoir. */
+  --bg:#f2f5f7; --surface:#ffffff; --ink:#16222d; --muted:#5d6c7a; --line:#d7dee5;
+  --accent:#0e7268; --accent-ink:#ffffff; --accent-soft:#d6eeea;
+  --warn:#a85a0a; --warn-soft:#fbe9cf; --good:#1a7a3f; --good-soft:#d9f0e1; --bad:#b42323; --bad-soft:#f9dede;
+  --display:'Sora',system-ui,sans-serif; --body:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{ color-scheme:dark;
+    --bg:#0f161c; --surface:#172028; --ink:#e8edf1; --muted:#9aa8b4; --line:#2c3842;
+    --accent:#3cc4b4; --accent-ink:#06211d; --accent-soft:#163b37;
+    --warn:#f0b35e; --warn-soft:#3b2a12; --good:#5fd38a; --good-soft:#143322; --bad:#ff7b7b; --bad-soft:#3d1a1a; }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
+.wrap{max-width:720px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+h1{font-family:var(--display);font-size:1.5rem;font-weight:700;margin:0;letter-spacing:-0.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:0;font-size:.95rem}
+nav{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+nav button{appearance:none;background:none;border:0;border-bottom:3px solid transparent;padding:10px 12px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+nav button:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h2{font-family:var(--display);font-size:1.2rem;font-weight:600;margin:0 0 10px;text-wrap:balance}
+h3{font-family:var(--display);font-size:1rem;font-weight:600;margin:18px 0 6px}
+p{margin:0 0 10px;max-width:65ch}
+ul,ol{margin:0 0 12px;padding-left:22px;max-width:65ch}
+li{margin-bottom:4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:12px}
+.card.accent{border-color:var(--accent);background:linear-gradient(0deg,var(--accent-soft),var(--surface))}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.m{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.note{color:var(--muted);font-size:.9rem}
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer;transition:background .15s}
+.btn:hover{background:var(--accent-soft)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.big{padding:14px 18px;font-size:1.05rem;width:100%;margin-top:8px}
+.btn.ghost{width:100%;margin-top:8px}
+.btn:disabled{opacity:.5;cursor:default}
+.pill{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.8rem;font-weight:600}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.soft{background:var(--accent-soft);color:var(--accent)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.tile .n{font-family:var(--display);font-size:1.6rem;font-weight:700;line-height:1.1}
+.tile .l{color:var(--muted);font-size:.85rem}
+.opt{display:block;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;margin:8px 0;font:inherit;font-size:.97rem;line-height:1.4;color:var(--ink);cursor:pointer}
+.opt:active{background:var(--accent-soft)}
+.opt.ok{border-color:var(--good);background:var(--good-soft)}
+.opt.ko{border-color:var(--bad);background:var(--bad-soft)}
+.opt.mid{border-color:var(--warn);background:var(--warn-soft)}
+.opt.dim{opacity:.55}
+.timer{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:8px 0 14px}
+.timer i{display:block;height:100%;background:var(--accent);width:100%;transition:width .95s linear}
+.timer.warn i{background:var(--bad)}
+.fb{border-left:3px solid var(--line);padding:8px 12px;margin:12px 0;font-size:.95rem}
+.fb.ok{border-color:var(--good)} .fb.ko{border-color:var(--bad)} .fb.mid{border-color:var(--warn)}
+.data{font-family:var(--mono);font-size:.9rem;background:var(--accent-soft);border-radius:8px;padding:10px 12px;margin:10px 0;white-space:pre-line}
+.prog{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.bars .b{margin:9px 0}
+.bars .b .l{display:flex;justify-content:space-between;font-size:.92rem;margin-bottom:4px}
+.bars .b .t{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.bars .b .t i{display:block;height:100%;background:var(--accent)}
+.bars .b .t i.lo{background:var(--bad)} .bars .b .t i.md{background:var(--warn)}
+.hist{display:flex;align-items:flex-end;gap:4px;height:60px;margin-top:8px}
+.hist i{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:3px;opacity:.85}
+.score{font-family:var(--display);font-size:2.8rem;font-weight:700;line-height:1;margin:6px 0 2px}
+.brief{white-space:pre-line}
+.step{font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:.85rem;color:var(--muted);font-weight:600}
+input[type=text]{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:100%}
+details summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.92rem}
+@media (prefers-reduced-motion: reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="row" style="justify-content:space-between;align-items:baseline">
+    <h1>Playbook Drill</h1>
+    <span class="pill soft" id="sync-pill" title="Où est enregistrée ta progression">Progression : cet appareil</span>
+  </div>
+  <p class="sub">Entraînement analytique : les règles du Playbook jusqu'au réflexe.</p>
+</header>
+
+<nav role="tablist" aria-label="Sections">
+  <button role="tab" data-v="home" aria-selected="true">Aujourd'hui</button>
+  <button role="tab" data-v="drill" aria-selected="false">Drill</button>
+  <button role="tab" data-v="cas" aria-selected="false">Cas</button>
+  <button role="tab" data-v="stats" aria-selected="false">Progression</button>
+</nav>
+
+<main id="app"></main>
+</div>
+
+<script>
+/* ===================== DONNÉES ===================== */
+/* Première option = bonne réponse (mélangées à l'affichage). t = secondes. Nouveau contenu chaque lundi. */
+const CATS={
+  fam:{n:"Familles du Playbook",s:"Familles"},
+  cad:{n:"Cadrage",s:"Cadrage"},
+  pct:{n:"Points vs pourcents",s:"Calcul"},
+  alt:{n:"Fausse alternative",s:"Alternative"},
+  obs:{n:"Attribut observable vs cause supposée",s:"Observable"},
+  ind:{n:"Contenu de l'indicateur",s:"Indicateur"},
+  par:{n:"Parcimonie",s:"Parcimonie"},
+  seq:{n:"Séquençage",s:"Séquençage"}
+};
+// Première option = bonne réponse (mélangées à l'affichage). t = secondes.
+const Q=[
+// Familles
+{id:"f1",cat:"fam",t:30,q:"Famille Cadrage : quelle question t'impose-t-elle ?",o:["Quelle est la question causale, indépendamment de la solution qu'on me propose ?","Quelle donnée tuerait mon hypothèse ?","Ce chiffre masque-t-il un sous-groupe ?","Qu'est-ce qui est gratuit à vérifier avant de comparer ?"],w:"Ne jamais hériter du cadre de celui qui pose le problème. La solution proposée est une hypothèse parmi d'autres."},
+{id:"f2",cat:"fam",t:30,q:"Famille Falsifiabilité : quelle question t'impose-t-elle ?",o:["Quelle donnée tuerait mon hypothèse, et explique-t-elle tous les faits avec un seul récit ?","Quelle est la question causale ?","Que contient exactement ce chiffre ?","Que dois-je éliminer avant de comparer ?"],w:"Une hypothèse sans donnée qui la tue est une étiquette. Et une cause valable explique tous les faits observés, pas un seul."},
+{id:"f3",cat:"fam",t:30,q:"Famille Qualité de la donnée : quelle question t'impose-t-elle ?",o:["Que contient exactement ce chiffre, et masque-t-il un sous-groupe ?","Quelle donnée tuerait mon hypothèse ?","Quelle solution me propose-t-on ?","Qu'est-ce qui est gratuit à vérifier ?"],w:"Le 3,8 % de churn masquait une cohorte ; la marge de 55 % masquait 5 magasins ; la marge brute ne contient pas les salaires."},
+{id:"f4",cat:"fam",t:30,q:"Famille Séquençage : quelle question t'impose-t-elle ?",o:["Qu'est-ce que je dois éliminer, gratuitement, avant de comparer quoi que ce soit ?","Quelle est la question causale ?","Mon hypothèse est-elle réfutable ?","Ce chiffre masque-t-il un sous-groupe ?"],w:"Le churn du Sud en N-1 éliminait trois hypothèses d'un coup, gratuitement, avant toute comparaison régionale."},
+{id:"f5",cat:"fam",t:40,q:"« Ces clients perdent l'intérêt pour la solution. » Quelle famille cette hypothèse viole-t-elle ?",o:["Falsifiabilité","Cadrage","Séquençage","Qualité de la donnée"],w:"Aucune donnée ne peut la tuer : elle décrit le départ sans l'expliquer. C'est une étiquette, pas une hypothèse."},
+{id:"f6",cat:"fam",t:40,q:"« Le churn est de 3,8 %, le problème touche donc toute la base. » Quelle famille est violée ?",o:["Qualité de la donnée","Cadrage","Falsifiabilité","Séquençage"],w:"Un agrégat ne dit rien de sa composition. Avant de conclure sur l'ensemble, vérifier si un sous-groupe porte l'écart."},
+{id:"f7",cat:"fam",t:40,q:"« Le fondateur veut baisser les prix ; calculons l'impact sur le revenu. » Quelle famille est violée ?",o:["Cadrage","Parcimonie","Séquençage","Qualité de la donnée"],w:"La solution du fondateur est devenue l'objectif de l'analyse. La question causale n'a jamais été posée."},
+{id:"f8",cat:"fam",t:30,q:"Combien de familles compte le Playbook ?",o:["4 : cadrage, falsifiabilité, qualité de la donnée, séquençage","3 : cadrage, données, décision","5 : cadrage, hypothèses, données, séquençage, décision","8 : une par règle"],w:"Quatre familles, douze règles maximum. Au-delà, toute règle nouvelle en remplace une."},
+// Cadrage
+{id:"c1",cat:"cad",t:50,q:"« Le beurre a pris 18 %, je monte les prix de 8 %, prépare l'argumentaire. » Ta reformulation :",o:["Qu'est-ce qui explique la baisse de marge, et une hausse de prix traite-t-elle cette cause ?","De combien faut-il monter les prix pour restaurer la marge ?","Comment faire accepter la hausse aux équipes ?","Le coût matière justifie-t-il 8 % de hausse ?"],w:"Ouverte sur la cause, fermée sur le fait à expliquer. Les trois autres héritent du cadre du fondateur."},
+{id:"c2",cat:"cad",t:40,q:"Le fondateur arrive avec une solution. Le risque principal pour l'analyste :",o:["Hériter de son cadre et ne tester qu'une seule cause","Le vexer en remettant en cause son analyse","Perdre du temps à reformuler","Sous-estimer son intuition du terrain"],w:"Sa solution encode une hypothèse causale implicite. L'adopter, c'est renoncer à tester les autres."},
+{id:"c3",cat:"cad",t:40,q:"Une bonne question analytique de départ est :",o:["Ouverte sur la cause, fermée sur le fait à expliquer","Fermée sur l'hypothèse la plus probable","Formulée comme un choix entre deux options","Alignée sur la décision à prendre"],w:"« Qu'est-ce qui explique le passage de 2,1 % à 3,8 % ? » Le fait est précis, la cause reste ouverte."},
+{id:"c4",cat:"cad",t:40,q:"« Est-ce un effet de saisonnalité ? » comme question de cadrage :",o:["Trop fermée : si la réponse est non, il ne reste plus de question","Correcte : elle est testable","Correcte si la saisonnalité est l'hypothèse dominante","Trop vague pour être testée"],w:"Une question fermée sur une hypothèse s'épuise avec elle. La question doit survivre à l'élimination de chaque hypothèse."},
+{id:"c5",cat:"cad",t:40,q:"Structurer en 3 axes maximum, c'est structurer par :",o:["Attributs observables ou mécanismes, pas par causes supposées","Ordre de probabilité des causes","Facilité d'accès aux données","Impact financier estimé"],w:"Volume, zone, transporteur : trois attributs observables. « Les clients déçus » n'est pas un axe, c'est une hypothèse."},
+{id:"c6",cat:"cad",t:40,q:"« Le churn a atteint un seuil qui doit être traité en urgence » comme axe d'analyse :",o:["Ce n'est pas un axe causal, c'est un critère de décision","Un axe valable : il fixe la priorité","Un axe valable s'il est chiffré","Un axe à garder pour la restitution au board"],w:"Un axe d'analyse explique le phénomène. L'urgence ne l'explique pas, elle dit seulement quoi en faire."},
+// Points vs pourcents
+{id:"p1",cat:"pct",t:45,q:"Une marge brute passe de 62 % à 55 %. La baisse est de :",o:["7 points, soit 11 % en relatif","7 %","11 points","7 points, soit 7 % en relatif"],w:"Écart de taux = points. 7 / 62 ≈ 11 % en relatif. Devant un board, c'est ce chiffre qu'on te reprendra."},
+{id:"p2",cat:"pct",t:40,q:"Un taux passe de 2 % à 4 %. C'est :",o:["+2 points, soit un doublement","+2 %","+200 points","+4 points"],w:"Deux points d'écart, +100 % en relatif. « +2 % » laisserait croire à un passage de 2 % à 2,04 %."},
+{id:"p3",cat:"pct",t:60,q:"Churn mensuel de 2,1 % à 3,8 % sur 420 clients. Départs supplémentaires par mois :",o:["≈ 7","≈ 16","≈ 9","≈ 2"],w:"1,7 point × 420 ≈ 7. Les 16, c'est le total des départs ; les 9, c'est le niveau habituel. L'excès, c'est la différence."},
+{id:"p4",cat:"pct",t:60,q:"Taux dans le créneau de 94 % à 81 %, sur 12 300 livraisons/mois. Livraisons hors créneau en plus :",o:["≈ 1 600","≈ 1 300","≈ 2 300","≈ 740"],w:"13 points × 12 300 ≈ 1 600. Ou : 19 % ≈ 2 340 contre 6 % ≈ 740 avant. 2 300 est le total, pas l'excès."},
+{id:"p5",cat:"pct",t:60,q:"CA mensuel 700 000 €, marge brute de 62 % tombée à 55 %. Marge perdue par mois :",o:["≈ 49 000 €","≈ 7 000 €","≈ 77 000 €","≈ 11 000 €"],w:"7 points × 700 000 € = 49 000 €. 77 000 € appliquerait 11 % au CA : c'est le relatif appliqué à la mauvaise base."},
+{id:"p6",cat:"pct",t:45,q:"Des ventes progressent de 50 %, puis baissent de 50 %. Par rapport au départ :",o:["−25 %","0 %","−50 %","+25 %"],w:"100 → 150 → 75. Les pourcentages successifs ne s'additionnent pas : la base change entre les deux."},
+{id:"p7",cat:"pct",t:60,q:"Churn de 2,1 % par mois sur 420 clients. Sur trois mois, cela représente environ :",o:["≈ 26 départs","≈ 9 départs","≈ 63 départs","≈ 6 départs"],w:"0,021 × 420 ≈ 9 par mois, donc ≈ 26 sur trois mois. 63 serait 2,1 % multiplié par 3 mois puis par… rien de cohérent."},
+{id:"p8",cat:"pct",t:70,q:"5 magasins sur 14 perdent 16 points de marge, les 9 autres 1,5 point. Baisse moyenne du réseau (CA comparables) :",o:["≈ 7 points","≈ 9 points","≈ 17,5 points","≈ 2,5 points"],w:"Moyenne pondérée : (5 × 16 + 9 × 1,5) / 14 ≈ 6,7. La moyenne simple des deux groupes (≈ 9) ignore leurs poids."},
+{id:"p9",cat:"pct",t:50,q:"Deux chiffres : « 14 % de départs en plus » et « 14 points de taux en plus ». Lequel est le plus grand phénomène ?",o:["Impossible à dire sans la base : ce sont deux grandeurs différentes","Les 14 points, toujours","Les 14 %, toujours","Ils sont équivalents"],w:"14 % de plus sur 100 départs, c'est 14 départs. 14 points sur un taux de 2 %, c'est multiplier par 8. Sans la base, aucune comparaison."},
+// Fausse alternative
+{id:"a1",cat:"alt",t:45,q:"« J'ai trois hypothèses. H3 est éliminée, donc c'est H1 ou H2. » Ce raisonnement est :",o:["Invalide : rien ne garantit que la liste soit exhaustive","Valide si les trois hypothèses sont plausibles","Valide : éliminer une hypothèse renforce les autres","Invalide : il faudrait aussi éliminer H1 et H2"],w:"Éliminer réduit l'espace des causes possibles, sans démontrer aucune des restantes. Trois hypothèses ne sont pas toutes les hypothèses."},
+{id:"a2",cat:"alt",t:45,q:"Le transport est au niveau habituel. Peut-on conclure que le problème est dans l'entrepôt ?",o:["Non : d'autres maillons existent, dont la définition même de la promesse","Oui : si ce n'est pas le transport, c'est la préparation","Oui, à condition de vérifier les quatre dépôts","Non : il faut d'abord changer de transporteur"],w:"Cas Pacty. Transport éliminé, entrepôt supposé : la cause était dans la cible, pas dans l'exécution."},
+{id:"a3",cat:"alt",t:40,q:"Éliminer une hypothèse, c'est :",o:["Réduire l'espace des causes possibles, sans en démontrer aucune","Démontrer la plus probable des restantes","Un test non concluant","Confirmer l'hypothèse concurrente"],w:"Une élimination est une information négative. Elle ne se transforme en information positive que si la liste est exhaustive et exclusive."},
+{id:"a4",cat:"alt",t:60,q:"Quel énoncé est logiquement valide ?",o:["Si la cause était saisonnière, le même écart existerait en N-1 ; il n'existe pas, donc elle n'est pas saisonnière","Le concurrent n'explique pas le churn, donc la cause est interne","Les trois transporteurs sont au même niveau, donc aucun n'est en cause","Le mix est stable, donc les invendus n'ont pas bougé"],w:"Le premier teste une prédiction de l'hypothèse. Les trois autres concluent sur autre chose que ce qui a été testé."},
+{id:"a5",cat:"alt",t:45,q:"Trois hypothèses testées et éliminées. L'étape suivante :",o:["Élargir l'espace des hypothèses, notamment aux actions de l'entreprise elle-même","Retenir la moins improbable des trois","Demander une donnée plus fine sur la plus plausible","Conclure à une cause externe de marché"],w:"Si tout ce que tu as listé est mort, c'est la liste qui était incomplète, pas la réalité."},
+{id:"a6",cat:"alt",t:45,q:"« Le canal en ligne ne génère pas plus de no-show que le téléphone, donc les patients sont devenus moins fiables. » Défaut :",o:["Fausse alternative : l'élimination du canal ne valide pas l'hypothèse comportementale","Aucun : l'hypothèse du canal est bien éliminée","Il manque la taille des échantillons","Le téléphone aurait dû être testé en premier"],w:"Deux hypothèses sur la table ne font pas une alternative complète. Il reste tout ce qui n'a pas été nommé."},
+// Observable vs cause supposée
+{id:"o1",cat:"obs",t:40,q:"Lequel est un attribut observable utilisable pour isoler un sous-groupe ?",o:["Le canal d'acquisition","Les clients sensibles au prix","Les clients déçus par le produit","Les clients mal onboardés"],w:"Canal, cohorte, zone, site, ancienneté : des attributs dans la base. Les trois autres sont des causes supposées déguisées en segments."},
+{id:"o2",cat:"obs",t:50,q:"Décomposer les départs en « prix / concurrence / saisonnalité ». Défaut principal :",o:["Chaque case est une hypothèse déguisée en chiffre","Les trois causes ne sont pas exclusives","Il manque une case « autres »","Les proportions ne sont pas mesurables"],w:"La cause est précisément ce qu'on ignore. La découper en cases, c'est supposer la réponse pour la compter."},
+{id:"o3",cat:"obs",t:60,q:"11 entretiens de départ sur 48 départs, dont 3 citent le prix. Que peut-on en conclure ?",o:["Rien de quantifié : 37 départs ne sont pas renseignés","Que 27 % des départs sont liés au prix","Que le prix est marginal dans les départs","Que le prix est la cause principale"],w:"3 sur 11 n'est pas 3 sur 48. Les non-interrogés ne sont pas « partis pour autre chose » : on ne sait rien d'eux."},
+{id:"o4",cat:"obs",t:45,q:"Pour savoir si un sous-groupe se détache, la bonne demande est :",o:["Le même indicateur découpé par attribut (zone, canal, cohorte, site)","La liste des causes citées par les clients","Un entretien qualitatif approfondi","L'évolution de l'indicateur global sur 24 mois"],w:"Même métrique, découpage par ce qu'on observe. Si un segment porte tout l'écart, la cause est là."},
+{id:"o5",cat:"obs",t:45,q:"Le sous-groupe est isolé. L'erreur la plus fréquente à ce stade :",o:["Tester les causes une par une au lieu de demander ce qui distingue ce groupe","Chercher un second sous-groupe","Vérifier la taille du groupe","Recalculer l'indicateur global"],w:"Machine ? Personnel ? Formation ? Une par une, c'est sans fin. « Qu'est-ce que ces sites ont en commun et pas les autres ? » teste tout d'un coup."},
+{id:"o6",cat:"obs",t:40,q:"Dans l'espace des hypothèses, qu'oublie-t-on le plus souvent ?",o:["Les actions de l'entreprise elle-même","Les facteurs macroéconomiques","Le comportement des concurrents","La saisonnalité"],w:"Partenariat, laboratoire central, promesse raccourcie : dans trois cas sur trois, la cause était une décision interne que personne n'avait reliée au symptôme."},
+{id:"o7",cat:"obs",t:50,q:"Les clients partis sont « ceux qui ont souscrit en T1 et sont dans le Sud ». Cette description est :",o:["Correcte : deux attributs observables, sans cause supposée","Incomplète : il manque la raison du départ","Incorrecte : il faut d'abord qualifier leur insatisfaction","Trop large pour être utile"],w:"Cohorte et zone. La cause vient après, et c'est l'intersection des deux attributs qui la désigne."},
+// Contenu de l'indicateur
+{id:"i1",cat:"ind",t:40,q:"La marge brute inclut-elle les salaires des équipes en magasin ?",o:["Non : CA moins coût des produits vendus","Oui, s'ils sont affectés à la production","Oui, c'est la marge après coûts directs","Non, mais elle inclut les loyers"],w:"Marge brute = CA − coût des produits vendus. Salaires, loyers, frais généraux viennent après."},
+{id:"i2",cat:"ind",t:40,q:"Les invendus pèsent-ils sur la marge brute ?",o:["Oui : matière consommée mais non vendue","Non : ils relèvent des charges d'exploitation","Non : ils n'apparaissent pas en comptabilité","Seulement s'ils sont provisionnés"],w:"Ce qui est produit et jeté a consommé de la matière sans générer de CA. Cas Fournil : 4 % → 20 % du CA."},
+{id:"i3",cat:"ind",t:45,q:"Le mix des ventes renseigne-t-il sur les invendus ?",o:["Non : un produit jeté n'apparaît jamais dans les ventes","Oui, indirectement, par la répartition des catégories","Oui, si on le croise avec les volumes produits","Non, mais il donne le coût matière par produit"],w:"Le mix décrit ce qui a été vendu. Une seule donnée ne teste qu'un seul levier."},
+{id:"i4",cat:"ind",t:50,q:"Exécution identique, indicateur en chute de 13 points. Qu'est-ce qui a forcément changé ?",o:["La cible : la promesse ou la définition de l'indicateur","Le périmètre des clients mesurés","La fiabilité de la mesure","Le volume traité"],w:"Un taux compare un réalisé à une référence. Si le réalisé est stable, c'est la référence qui a bougé."},
+{id:"i5",cat:"ind",t:45,q:"Un indicateur dont la définition a changé en mai. La série janvier-août est :",o:["Non comparable : elle mélange deux règles de calcul","Comparable si le changement est documenté","Comparable après retraitement de la saisonnalité","Comparable, le périmètre étant inchangé"],w:"Deux définitions, deux séries. La première chose à dire au board, avant tout chiffre."},
+{id:"i6",cat:"ind",t:40,q:"Avant d'analyser un indicateur, la première question est :",o:["Que contient-il exactement, numérateur et dénominateur ?","Comment a-t-il évolué sur 12 mois ?","Comment se compare-t-il au marché ?","Qui en est responsable ?"],w:"Trois cas sur trois : la métrique ne mesurait pas ce que le fondateur croyait."},
+{id:"i7",cat:"ind",t:60,q:"Taux de retour = retours du mois / commandes du mois, avec 30 jours pour retourner. Le risque :",o:["Numérateur et dénominateur ne portent pas sur les mêmes commandes","Le taux est systématiquement sous-estimé","Le taux ne capte pas les échanges","Aucun : les deux se compensent"],w:"Les retours d'avril viennent des commandes de mars. Si le volume varie d'un mois à l'autre, le ratio bouge sans que rien n'ait changé."},
+{id:"i8",cat:"ind",t:50,q:"Le marketing a raccourci le créneau promis de 4 h à 2 h. Pour les opérations, le taux de respect :",o:["Chute mécaniquement, à exécution identique","Ne bouge pas si les tournées sont les mêmes","Chute seulement si le transporteur est informé","S'améliore : la contrainte motive"],w:"Cas Pacty. Mesuré à 4 h, le taux était toujours de 93,6 %. Les 13 points perdus étaient un changement de règle."},
+// Parcimonie
+{id:"r1",cat:"par",t:50,q:"Trois transporteurs indépendants décrochent le même mois, dans les mêmes proportions. Lecture la plus parcimonieuse :",o:["Une cause commune en amont, chez le donneur d'ordre","Trois défaillances simultanées liées au volume d'été","Un effet de marché sur le transport régional","Une dégradation générale de la qualité de service"],w:"Trois entreprises distinctes, un seul récit : ce qu'elles partagent, c'est le client. La cause est chez Pacty."},
+{id:"r2",cat:"par",t:50,q:"Cinq magasins, cinq équipes distinctes, perdent leur maîtrise opérationnelle le même mois. À déduire :",o:["La cause est commune et extérieure aux équipes","Les recrutements ont été mal faits partout","La formation interne est défaillante","C'est une coïncidence à documenter"],w:"Cinq coïncidences simultanées, ou une cause unique. Cas Fournil : le laboratoire central."},
+{id:"r3",cat:"par",t:40,q:"Entre deux hypothèses de pouvoir explicatif égal, on retient :",o:["Celle qui mobilise le moins de récits séparés","Celle qui est la plus facile à tester","Celle qui correspond à l'intuition du terrain","Celle qui couvre le plus de cas possibles"],w:"À explication égale, moins d'hypothèses auxiliaires. Chaque récit supplémentaire est un point de fragilité."},
+{id:"r4",cat:"par",t:50,q:"Une hypothèse explique la concentration géographique mais pas la concentration par cohorte. Elle est :",o:["Insuffisante : une cause valable explique tous les faits observés","Partiellement validée","À retenir faute de mieux","À tester en priorité"],w:"Deux faits, un récit. Une hypothèse qui n'en couvre qu'un t'oblige à en inventer un second : parcimonie violée."},
+{id:"r5",cat:"par",t:60,q:"Hypothèse : « départ du commercial local ». Or les clients de plus de 7 mois churnent normalement. Conclusion :",o:["L'hypothèse est morte avant la donnée : elle toucherait tous les clients","L'hypothèse reste plausible pour les clients récents","Il faut vérifier les effectifs pour trancher","L'hypothèse explique la moitié du phénomène"],w:"Un commercial parti affecterait toute sa zone. Le fait « seuls les 4-7 mois churnent » la tue sans donnée supplémentaire."},
+{id:"r6",cat:"par",t:50,q:"« Rotation des stocks », « concurrence saisonnière », « bureaux vides en été » comme trois hypothèses distinctes :",o:["Une seule hypothèse sous trois habillages : un effet saisonnier structurel","Trois hypothèses indépendantes à tester séparément","Deux hypothèses, la troisième étant redondante","Trois hypothèses complémentaires"],w:"Toutes décrivent une structure qui existe chaque été. Une seule donnée (N-1) les tue toutes : elles n'en faisaient qu'une."},
+// Séquençage
+{id:"s1",cat:"seq",t:40,q:"Avant d'interpréter un écart entre régions, la vérification gratuite est :",o:["Le même écart en N-1","La taille des échantillons","La répartition des volumes","Les entretiens de départ"],w:"Si l'écart existait déjà l'an dernier, il est structurel. S'il est nouveau, quelque chose a changé. Une donnée, deux familles d'hypothèses tranchées."},
+{id:"s2",cat:"seq",t:45,q:"Une donnée coûteuse tranche deux hypothèses, une gratuite n'en tranche qu'une. On commence par :",o:["La gratuite, puis on réévalue","La coûteuse, pour son pouvoir discriminant","Les deux en parallèle","Celle qui est la plus rapide à obtenir"],w:"Le résultat de la gratuite peut rendre la coûteuse inutile. Épuiser le gratuit avant d'engager le coûteux."},
+{id:"s3",cat:"seq",t:40,q:"Demander une donnée sans hypothèse derrière, c'est :",o:["De la pêche : rien ne sera tranché","Un balayage exploratoire utile","Acceptable si la donnée est gratuite","La bonne méthode en début de cas"],w:"Avant de voir le chiffre, savoir ce qu'il confirmerait et ce qu'il tuerait. Sinon on l'interprète après coup, dans le sens qu'on veut."},
+{id:"s4",cat:"seq",t:50,q:"Plusieurs hypothèses partagent une variable confondante non contrôlée. L'ordre correct :",o:["Éliminer la confondante, puis interpréter les comparaisons","Comparer les segments, puis contrôler","Tester l'hypothèse la plus probable d'abord","Traiter les deux simultanément"],w:"Donnée filtre avant donnée discriminante. Sinon la comparaison simule une hypothèse sans la confirmer."},
+{id:"s5",cat:"seq",t:50,q:"Quelle question teste le plus d'hypothèses internes d'un coup ?",o:["« Qu'est-ce qui a changé sur cette période, ici et pas ailleurs ? »","« Les effectifs ont-ils bougé ? »","« Le process a-t-il été modifié ? »","« L'outil a-t-il changé de version ? »"],w:"Les trois autres testent une cause chacune. La première les contient toutes, et celles auxquelles tu n'as pas pensé."},
+{id:"s6",cat:"seq",t:50,q:"Le chiffre d'affaires des restaurants clients, pour un éditeur SaaS, est une donnée :",o:["Inaccessible : elle n'est pas dans la base de l'éditeur","Coûteuse mais obtenable par enquête","Gratuite : elle figure dans le CRM","Disponible via les comptes publics"],w:"Avant d'arbitrer coût contre pouvoir discriminant, vérifier que la donnée existe pour toi. Cas Stocka : le CA client n'existait pas."}
+];
+
+const CASES=[
+{id:"velora",title:"Velora",sub:"E-commerce · taux de retour",
+brief:"Velora vend du prêt-à-porter en ligne, environ 9 000 commandes par mois. Le taux de retour, suivi mensuellement, était de 23 % de janvier à mars. Il est monté à 31 % en avril et 33 % en mai.\n\nLes clients ont 30 jours pour retourner un article. En mars, une grosse campagne d'acquisition a fait bondir les commandes (+70 %) ; elle s'est arrêtée fin mars. Deux nouveaux fournisseurs asiatiques livrent depuis février.\n\nLe fondateur : « Les deux nouveaux fournisseurs dégradent la qualité, c'est évident. Je veux les sortir et revenir à des fournisseurs européens. Aide-moi à chiffrer le surcoût pour le présenter à mon associé. »",
+steps:[
+{q:"Reformule le problème en question analytique.",o:[
+ {t:"Qu'est-ce qui explique la hausse du taux de retour, et un changement de fournisseur traite-t-il cette cause ?",s:2,f:"Ouverte sur la cause, fermée sur le fait. La solution du fondateur devient une hypothèse à tester parmi d'autres."},
+ {t:"Les produits des nouveaux fournisseurs sont-ils plus retournés que les autres ?",s:1,f:"Testable et utile, mais c'est l'hypothèse du fondateur transformée en question. Si la réponse est non, il ne reste plus de question."},
+ {t:"Quel est le surcoût d'un approvisionnement européen ?",s:0,f:"Tu as hérité de l'objectif du fondateur. La cause n'a pas été posée."},
+ {t:"La qualité produit s'est-elle dégradée depuis février ?",s:0,f:"Même cadre que le fondateur, formulé autrement : une seule cause envisagée."}]},
+{q:"Ta première donnée. Elle doit trancher entre des hypothèses, pas ouvrir une piste.",o:[
+ {t:"La définition exacte du taux de retour : numérateur et dénominateur",s:2,f:"Gratuite, et elle précède tout le reste. Avant de chercher pourquoi un chiffre bouge, savoir ce qu'il mesure."},
+ {t:"Le taux de retour par fournisseur",s:1,f:"Légitime : elle teste l'hypothèse du fondateur, gratuitement. Mais tu interprètes déjà un indicateur dont tu ne connais pas la construction."},
+ {t:"Le taux de retour par catégorie de produit",s:1,f:"Attribut observable, bon réflexe. Même réserve : l'indicateur lui-même n'a pas été examiné."},
+ {t:"Les motifs de retour déclarés par les clients",s:0,f:"Déclaratif, partiel, et chaque motif est une cause supposée. Tu comptes des hypothèses."}],
+ d:"Donnée : taux de retour = retours enregistrés dans le mois ÷ commandes passées dans le mois.\nVolumes : janvier 8 800 commandes, février 9 100, mars 15 400, avril 9 000, mai 8 900."},
+{q:"Quelle est ta lecture de ces volumes, rapportée à la définition de l'indicateur ?",o:[
+ {t:"Le dénominateur d'avril est petit alors que le numérateur porte en partie sur les 15 400 commandes de mars : le ratio est gonflé mécaniquement",s:2,f:"Les retours d'avril sont ceux des commandes de mars (délai de 30 jours). 15 400 commandes au numérateur, 9 000 au dénominateur : le taux monte sans que rien n'ait changé."},
+ {t:"La campagne de mars a attiré des clients moins qualifiés, qui retournent davantage",s:1,f:"Hypothèse réelle, testable, à garder. Mais elle ne traite pas l'anomalie de construction de l'indicateur, qui suffit peut-être à tout expliquer."},
+ {t:"Le pic de mars a saturé la logistique et dégradé la qualité d'expédition",s:0,f:"Nouvelle hypothèse ajoutée sans qu'aucune donnée ne la demande. Et elle n'explique pas pourquoi mai reste élevé."},
+ {t:"Il faut lisser le taux sur trois mois glissants",s:0,f:"Lisser masque l'artefact au lieu de le comprendre. Et le taux lissé resterait faux pour la même raison."}]},
+{q:"Quelle donnée tranche entre artefact de mesure et vrai changement de comportement ?",o:[
+ {t:"Le taux de retour par cohorte de commande : retours rattachés au mois de la commande, pas du retour",s:2,f:"Numérateur et dénominateur portent enfin sur les mêmes commandes. C'est l'indicateur qu'il aurait fallu depuis le début."},
+ {t:"Le taux de retour des clients acquis par la campagne contre les autres",s:1,f:"Attribut observable, bonne idée, mais tu testes une hypothèse de cohorte avec un indicateur toujours biaisé."},
+ {t:"Le délai moyen entre commande et retour",s:1,f:"Confirme le mécanisme du décalage, mais ne mesure pas le vrai taux de retour."},
+ {t:"Le taux de retour par fournisseur sur avril et mai",s:0,f:"Même indicateur biaisé, découpé autrement. Le biais se répartit sur tous les fournisseurs."}],
+ d:"Donnée : taux de retour par cohorte de commande.\nJanvier 23 % · février 23 % · mars 24 % · avril 23 %.\nClients acquis par la campagne de mars : 25 %. Nouveaux fournisseurs : 23 %, identique aux anciens."},
+{q:"Ta recommandation au fondateur.",o:[
+ {t:"Pas de changement de fournisseur : la hausse est un artefact de mesure. Corriger l'indicateur (par cohorte) et suivre l'écart de 2 points sur la cohorte campagne",s:2,f:"Le problème était dans la règle de calcul. Le seul signal réel est faible (25 % contre 23 %) et ne justifie aucune décision lourde."},
+ {t:"Pas de changement de fournisseur, mais arrêter l'acquisition payante qui attire des clients qui retournent plus",s:1,f:"Deux points d'écart ne justifient pas de couper un canal dont la rentabilité n'a pas été chiffrée. La bonne conclusion, prolongée trop loin."},
+ {t:"Changer un seul fournisseur, à titre de test",s:0,f:"Tester une hypothèse déjà morte : les nouveaux fournisseurs retournent au même taux que les anciens."},
+ {t:"Attendre deux mois de données supplémentaires avant de décider",s:0,f:"Les données existent déjà. Attendre, c'est continuer à lire un indicateur faux deux mois de plus."}]}
+],
+debrief:"L'indicateur était faux avant d'être mauvais. Numérateur et dénominateur doivent porter sur la même population : quand un délai les sépare, toute variation de volume crée une variation du taux sans aucun changement réel.\n\nRègle en jeu : famille Qualité de la donnée. « Que contient exactement ce chiffre ? » devait être la première question, avant toute hypothèse sur les fournisseurs."},
+
+{id:"nordis",title:"Nordis",sub:"Centres dentaires · rendez-vous non honorés",
+brief:"Nordis exploite 9 centres dentaires. Le taux de rendez-vous non honorés (no-show) était de 8 % de janvier à avril. Il est à 15 % en moyenne de juin à août.\n\nEn mai, Nordis a ouvert la prise de rendez-vous en ligne, qui représente aujourd'hui 40 % des réservations.\n\nLe fondateur : « Réserver en ligne ne coûte rien psychologiquement, les gens ne viennent plus. Je veux une caution de 30 € à la réservation. Aide-moi à préparer la décision pour le comité de direction. »",
+steps:[
+{q:"Reformule le problème en question analytique.",o:[
+ {t:"Qu'est-ce qui explique le passage de 8 % à 15 % de no-show, et une caution traite-t-elle cette cause ?",s:2,f:"Le fait est précis, la cause ouverte, la solution du fondateur est une hypothèse à tester."},
+ {t:"La prise de rendez-vous en ligne génère-t-elle plus de no-show que le téléphone ?",s:1,f:"C'est le bon premier test, mais comme question de cadrage elle est fermée : si la réponse est non, tu n'as plus de question."},
+ {t:"Quel montant de caution dissuade le no-show sans faire fuir les patients ?",s:0,f:"Tu as hérité de la solution. La cause n'a pas été posée."},
+ {t:"Les patients sont-ils devenus moins fiables ?",s:0,f:"Une étiquette, pas une question : aucune donnée ne peut la trancher."}]},
+{q:"Ta première donnée, avec son pouvoir de discrimination.",o:[
+ {t:"Le taux de no-show selon le canal de réservation : en ligne contre téléphone",s:2,f:"Gratuite, et elle teste directement l'hypothèse du fondateur. Si les deux canaux sont au même niveau, elle est morte."},
+ {t:"Le taux de no-show par centre",s:1,f:"Bon réflexe de sous-groupe. Mais l'hypothèse du fondateur peut être tuée en premier, gratuitement : c'est le séquençage."},
+ {t:"Les motifs d'annulation déclarés par les patients",s:0,f:"Les no-show n'annulent pas : ils ne viennent pas. Et un motif déclaré est une cause supposée."},
+ {t:"Le nombre moyen de rendez-vous par jour et par praticien",s:0,f:"Aucune hypothèse derrière. Tu pêches."}],
+ d:"Donnée : no-show juin-août.\nRéservations en ligne : 15,2 %. Réservations par téléphone : 14,8 %."},
+{q:"Le canal ne discrimine pas. Que conclus-tu, et quelle est la suite ?",o:[
+ {t:"L'hypothèse du canal est morte ; rien ne dit pour autant que la cause est chez les patients. Découper par centre",s:2,f:"Éliminer une hypothèse n'en valide aucune autre. Retour aux attributs observables."},
+ {t:"La cause est donc dans le comportement des patients, indépendamment du canal",s:0,f:"Fausse alternative. Deux hypothèses sur la table ne font pas une liste exhaustive."},
+ {t:"La caution serait donc inefficace ; analyser les créneaux horaires les plus touchés",s:1,f:"La conclusion sur la caution est prématurée (la cause n'est pas connue), mais le réflexe de découper par attribut est bon."},
+ {t:"Le canal en ligne a contaminé l'ensemble : les patients téléphoniques ont pris les mêmes habitudes",s:0,f:"Hypothèse auxiliaire inventée pour sauver l'hypothèse morte. Parcimonie violée."}],
+ d:"Donnée : no-show par centre, juin-août.\nCentres A, D, G : 28 %, 27 %, 29 %. Les six autres : entre 8 % et 9 %.\nTout l'excès est porté par trois centres."},
+{q:"Trois centres portent tout l'écart. Ta donnée suivante.",o:[
+ {t:"Ce qui a changé dans ces trois centres depuis mai, et qu'ils ont en commun",s:2,f:"Une question, toutes les causes internes testées d'un coup, y compris celles auxquelles tu n'as pas pensé."},
+ {t:"Le no-show de ces trois centres en N-1 sur la même période",s:1,f:"Bon réflexe de séquençage, et la réponse est 8 % : l'écart est nouveau. Mais cela ne te dit pas quoi chercher."},
+ {t:"La rotation du personnel d'accueil dans ces trois centres",s:1,f:"Une cause à la fois. Et trois équipes qui déraillent le même mois, c'est peu parcimonieux."},
+ {t:"La typologie des patients de ces trois centres",s:0,f:"Leur patientèle n'a pas changé en mai. Tu cherches une cause stable pour un phénomène nouveau."}],
+ d:"Donnée : en mai, les trois centres ont basculé vers un nouveau prestataire de SMS de rappel, moins cher. Ses messages sont filtrés comme indésirables par deux opérateurs mobiles. Taux de délivrance des rappels : 41 %, contre 98 % dans les six autres centres."},
+{q:"Ta recommandation au comité.",o:[
+ {t:"Pas de caution. Rétablir l'ancien prestataire SMS dans les trois centres, vérifier le retour à 8 % en un mois",s:2,f:"La cause est identifiée, interne, réversible, et le test de la correction est gratuit. La caution aurait pénalisé 100 % des patients pour un problème de rappels."},
+ {t:"Pas de caution. Doubler les rappels SMS d'un appel téléphonique dans les trois centres",s:1,f:"Traite le symptôme (rappels non reçus) sans corriger la cause (prestataire). Plus cher, et durable seulement si on ne comprend pas pourquoi."},
+ {t:"Caution limitée aux trois centres les plus touchés",s:0,f:"Le sous-groupe est trouvé, mais la solution du fondateur est appliquée à la cause de quelqu'un d'autre."},
+ {t:"Caution généralisée : le no-show reste un problème structurel",s:0,f:"Six centres sur neuf sont à leur niveau habituel. Il n'y a pas de problème structurel."}]}
+],
+debrief:"Le canal en ligne était l'hypothèse du fondateur ; une donnée gratuite l'a tuée. Le piège suivant était de conclure « donc c'est le comportement des patients » : une fausse alternative. Le découpage par centre a isolé le sous-groupe, et une seule question (« qu'est-ce qui a changé ici et pas ailleurs ») a trouvé la cause interne.\n\nRègles en jeu : fausse alternative, attribut observable, parcimonie, actions de l'entreprise dans l'espace des hypothèses."}
+];
+
+/* ===================== ÉTAT ===================== */
+const KEY='playbook-drill-s1';
+const EMPTY=()=>({v:1,sessions:0,streak:0,lastDay:null,cats:{},qs:{},history:[],cases:{},misses:[],log:[],updatedAt:0});
+const LOG_MAX=2000;
+let S=EMPTY();
+function load(){try{const raw=localStorage.getItem(KEY);if(raw){S={...EMPTY(),...JSON.parse(raw)};if(!Array.isArray(S.log))S.log=[];}}catch(e){}}
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function save(){S.updatedAt=Date.now();saveLocal();schedulePush();}
+function logEvent(ev){S.log.push({t:Date.now(),...ev});if(S.log.length>LOG_MAX)S.log.splice(0,S.log.length-LOG_MAX);}
+load();
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function dayDiff(a,b){if(!a||!b)return 99;return Math.round((new Date(b)-new Date(a))/86400000);}
+
+/* ===================== SYNCHRONISATION =====================
+   Deux canaux, comme EA Trainer :
+   1. l'app est servie comme artefact Claude : capacité db (window.claude.use)
+   2. l'app est servie sur drill.eldwin-uk.com : API /api/progress avec un code de synchronisation */
+let syncMode='local',dbRef=null,pushTimer=null,writeChain=Promise.resolve(),lastPushed='';
+const API_URL='api/progress';
+function syncToken(){try{return localStorage.getItem('pd-sync-token')||'';}catch(e){return '';}}
+function setSyncToken(t){try{localStorage.setItem('pd-sync-token',t.trim());}catch(e){}}
+function setSync(mode,detail){
+  const el=document.getElementById('sync-pill');if(!el)return;
+  if(mode==='synced'){el.textContent='Progression : synchronisée';el.className='pill good';el.title='Disponible sur tous tes appareils et lisible par Claude en séance.';}
+  else if(mode==='error'){el.textContent='Progression : cet appareil (sync en échec)';el.className='pill warn';el.title=detail||'La synchronisation a échoué, la progression reste enregistrée dans ce navigateur.';}
+  else{el.textContent='Progression : cet appareil';el.className='pill soft';el.title='Enregistrée dans ce navigateur uniquement.';}
+}
+function snapData(snap){
+  if(!snap)return null;
+  if(typeof snap.data==='function'){const ex=typeof snap.exists==='function'?snap.exists():snap.exists;if(ex===false)return null;return snap.data()||null;}
+  if(typeof snap==='object'){if(snap.exists===false)return null;return snap.data&&typeof snap.data==='object'?snap.data:snap;}
+  return null;
+}
+function mergeRemote(remote){
+  if(!(remote&&remote.state&&typeof remote.state==='object'))return false;
+  const rt=Number(remote.updatedAt||0),lt=Number(S.updatedAt||0);
+  if(rt>lt){S={...EMPTY(),...remote.state,updatedAt:rt};saveLocal();lastPushed=JSON.stringify({state:S,updatedAt:rt});render();return true;}
+  if(lt>rt){pushRemote();}else{lastPushed=JSON.stringify({state:S,updatedAt:lt});}
+  return true;
+}
+function schedulePush(){if(syncMode==='local')return;clearTimeout(pushTimer);pushTimer=setTimeout(pushRemote,800);}
+function pushRemote(){
+  if(syncMode==='local')return;
+  const payload={state:S,updatedAt:S.updatedAt||Date.now()};const ser=JSON.stringify(payload);
+  if(ser===lastPushed)return;
+  const doWrite=syncMode==='db'
+    ?()=>dbRef.set(JSON.parse(ser))
+    :()=>fetch(`${API_URL}?t=${encodeURIComponent(syncToken())}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:ser}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);});
+  writeChain=writeChain.then(doWrite).then(()=>{lastPushed=ser;setSync('synced');}).catch(e=>setSync('error',String(e&&e.message||e)));
+}
+async function initSync(){
+  const timeout=ms=>new Promise(r=>setTimeout(()=>r(null),ms));
+  try{
+    if(window.claude&&typeof window.claude.use==='function'){
+      const db=await Promise.race([window.claude.use('db'),timeout(10000)]);
+      if(db){dbRef=db.doc('progress/main');syncMode='db';
+        const snap=await Promise.race([dbRef.get(),timeout(10000)]);
+        if(!mergeRemote(snapData(snap))){if(S.updatedAt)pushRemote();}
+        setSync('synced');return;}
+    }
+    const t=syncToken();
+    if(t){
+      syncMode='api';
+      const r=await Promise.race([fetch(`${API_URL}?t=${encodeURIComponent(t)}`,{cache:'no-store'}),timeout(10000)]);
+      if(!r)throw new Error('Pas de réponse du serveur');
+      if(r.status===401||r.status===403){syncMode='local';setSync('error','Code de synchronisation refusé');return;}
+      if(r.status===404){if(S.updatedAt)pushRemote();setSync('synced');return;}
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      if(!mergeRemote(await r.json())){if(S.updatedAt)pushRemote();}
+      setSync('synced');return;
+    }
+    setSync('local');
+  }catch(e){setSync('error',String(e&&e.message||e));}
+}
+
+/* ===================== LOGIQUE ===================== */
+function acc(c){const s=S.cats[c];if(!s||s.seen<2)return 0.5;return s.ok/s.seen;}
+function pick(n){
+  const pool=Q.map(q=>{let w=1.3-acc(q.cat);const r=S.qs[q.id];if(r&&S.sessions-r.last<3)w*=0.3;if(r&&r.seen>=2&&r.ok===r.seen)w*=0.6;return{q,w};});
+  const out=[],cnt={};
+  while(out.length<n&&pool.length){
+    const tot=pool.reduce((s,p)=>s+p.w,0);let r=Math.random()*tot,i=0;
+    for(;i<pool.length;i++){r-=pool[i].w;if(r<=0)break;}
+    i=Math.min(i,pool.length-1);const q=pool[i].q;out.push(q);pool.splice(i,1);
+    cnt[q.cat]=(cnt[q.cat]||0)+1;if(cnt[q.cat]>=3){for(let k=pool.length-1;k>=0;k--)if(pool[k].q.cat===q.cat)pool.splice(k,1);}
+  }
+  return out;
+}
+function shuffle(a){const b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function eaScore(ok,n){return n?100+Math.round(100*ok/n):null;}
+function weakest(){let w=null,v=2;for(const c in CATS){const s=S.cats[c];if(!s||s.seen<2)continue;const a=s.ok/s.seen;if(a<v){v=a;w=c;}}return w;}
+function touchStreak(){const t=today();if(S.lastDay===t)return;const d=dayDiff(S.lastDay,t);S.streak=(d===1)?S.streak+1:1;S.lastDay=t;}
+function doneToday(){const t=today();return S.history.some(h=>h.d===t);}
+
+/* ===================== VUES ===================== */
+const app=document.getElementById('app');
+let view='home',drill=null,cs=null,timerId=null;
+const TABS=['home','drill','cas','stats'];
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function setView(v){view=v;if(timerId){clearInterval(timerId);timerId=null;}render();}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{drill=null;cs=null;setView(b.dataset.v);});
+const TAB_OF={home:'home',drill:'drill',drillq:'drill',drillend:'drill',cas:'cas',casplay:'cas',casend:'cas',stats:'stats'};
+
+function render(){
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===TAB_OF[view])));
+  const f={home,drill:drillHome,drillq,drillend,cas:casHome,casplay,casend,stats}[view]||home;
+  app.innerHTML=f();bind();window.scrollTo(0,0);
+}
+
+function home(){
+  const w=weakest();const last=S.history[S.history.length-1];
+  const n=S.history.reduce((s,h)=>s+h.n,0),ok=S.history.reduce((s,h)=>s+h.ok,0);const done=doneToday();
+  return '<div class="tiles"><div class="tile"><div class="n">'+S.streak+'</div><div class="l">jour'+(S.streak>1?'s':'')+' de suite</div></div>'+
+  '<div class="tile"><div class="n m">'+(last?last.score:'—')+'</div><div class="l">dernier score / 200</div></div>'+
+  '<div class="tile"><div class="n m">'+(n?Math.round(100*ok/n)+' %':'—')+'</div><div class="l">réussite globale</div></div></div>'+
+  '<div class="card'+(done?'':' accent')+'"><h2>'+(done?'Série du jour faite':'Série du jour')+'</h2>'+
+  (w?'<p class="note">Point faible actuel : <b>'+CATS[w].n+'</b> ('+Math.round(100*acc(w))+' %). La série insiste dessus.</p>':'<p class="note">Les deux premières séries calibrent tes points faibles ; la sélection devient adaptative ensuite.</p>')+
+  '<button class="btn primary big" data-a="startdrill">'+(done?'Refaire une série':'Drill · 10 questions')+'</button>'+
+  '<button class="btn ghost" data-a="gocas">Cas de la semaine</button></div>'+
+  '<div class="card"><h2>Les 4 familles</h2><p class="note">À réciter avant la série, sans lire. Puis vérifier.</p><details><summary>Vérifier</summary><ul style="font-size:.95rem;margin-top:8px">'+
+  '<li><b>Cadrage</b> : quelle est la question causale, indépendamment de la solution proposée ?</li>'+
+  '<li><b>Falsifiabilité</b> : quelle donnée tuerait mon hypothèse, et explique-t-elle tous les faits avec un seul récit ?</li>'+
+  '<li><b>Qualité de la donnée</b> : que contient exactement ce chiffre, et masque-t-il un sous-groupe ?</li>'+
+  '<li><b>Séquençage</b> : qu\'est-ce que je dois éliminer, gratuitement, avant de comparer ?</li></ul></details></div>';
+}
+
+function drillHome(){
+  return '<div class="card"><h2>Drill</h2><p class="note">10 questions chronométrées, une seule bonne réponse, correction immédiate. Les catégories où tu échoues reviennent plus souvent ; les questions vues récemment, moins. Score sur le modèle EA, de 100 à 200.</p>'+
+  '<button class="btn primary big" data-a="startdrill">Commencer</button></div>'+
+  '<div class="card"><h3 style="margin-top:0">Catégories</h3><p class="note">Chacune correspond à une erreur observée en séance.</p><ul style="font-size:.95rem">'+Object.keys(CATS).map(c=>'<li>'+CATS[c].n+'</li>').join('')+'</ul></div>';
+}
+function startDrill(){
+  const qs=pick(10).map(q=>({q,order:shuffle([0,1,2,3]),ans:null,ok:false,timeout:false}));
+  drill={qs,i:0,left:0,answered:false,total:0};
+  setView('drillq');startTimer();
+}
+function startTimer(){
+  if(timerId)clearInterval(timerId);
+  const it=drill.qs[drill.i];drill.left=it.q.t;drill.total=it.q.t;
+  timerId=setInterval(()=>{drill.left--;const bar=document.getElementById('tbar'),tl=document.getElementById('tleft');
+    if(bar){bar.style.width=Math.max(0,100*drill.left/drill.total)+'%';bar.parentElement.classList.toggle('warn',drill.left<=10);}
+    if(tl)tl.textContent=drill.left+' s';
+    if(drill.left<=0){clearInterval(timerId);timerId=null;answer(-1);}},1000);
+}
+function drillq(){
+  const it=drill.qs[drill.i],q=it.q;
+  let h='<div class="prog"><span>Question '+(drill.i+1)+' / '+drill.qs.length+'</span><span class="m" id="tleft">'+drill.left+' s</span></div>'+
+  '<div class="timer"><i id="tbar" style="width:'+(100*drill.left/(drill.total||q.t))+'%"></i></div>'+
+  '<div class="card"><span class="pill soft">'+CATS[q.cat].s+'</span><h2 style="margin-top:10px">'+esc(q.q)+'</h2>';
+  it.order.forEach((oi,k)=>{let cls='opt';
+    if(drill.answered){if(oi===0)cls+=' ok';else if(it.ans===k)cls+=' ko';else cls+=' dim';}
+    h+='<button class="'+cls+'" data-a="ans" data-k="'+k+'"'+(drill.answered?' disabled':'')+'>'+esc(q.o[oi])+'</button>';});
+  if(drill.answered){
+    h+='<div class="fb '+(it.ok?'ok':'ko')+'"><b>'+(it.ok?'Juste.':(it.timeout?'Temps écoulé.':'Faux.'))+'</b> '+esc(q.w)+'</div>'+
+    '<button class="btn primary big" data-a="next">'+(drill.i+1<drill.qs.length?'Suivant':'Voir le score')+'</button>';}
+  return h+'</div>';
+}
+function answer(k){
+  if(!drill||drill.answered)return;
+  if(timerId){clearInterval(timerId);timerId=null;}
+  const it=drill.qs[drill.i];it.ans=k;it.timeout=(k<0);it.ok=(k>=0&&it.order[k]===0);drill.answered=true;render();
+}
+function nextQ(){
+  if(drill.i+1<drill.qs.length){drill.i++;drill.answered=false;setView('drillq');startTimer();}
+  else endDrill();
+}
+function endDrill(){
+  touchStreak();S.sessions++;
+  let ok=0;const cats={};const d=today();
+  drill.qs.forEach(it=>{
+    const c=it.q.cat;S.cats[c]=S.cats[c]||{seen:0,ok:0};S.cats[c].seen++;cats[c]=cats[c]||{n:0,ok:0};cats[c].n++;
+    const r=S.qs[it.q.id]||{seen:0,ok:0,last:0};r.seen++;r.last=S.sessions;
+    if(it.ok){ok++;S.cats[c].ok++;r.ok++;cats[c].ok++;}else{S.misses.push({d,id:it.q.id,c});}
+    S.qs[it.q.id]=r;
+    logEvent({k:'q',id:it.q.id,c,ok:it.ok?1:0,to:it.timeout?1:0});
+  });
+  if(S.misses.length>80)S.misses=S.misses.slice(-80);
+  S.history.push({d,n:drill.qs.length,ok,score:eaScore(ok,drill.qs.length),cats});
+  if(S.history.length>60)S.history=S.history.slice(-60);
+  drill.result={ok,n:drill.qs.length,cats};
+  logEvent({k:'drill',ok,n:drill.qs.length});
+  save();setView('drillend');
+}
+function drillend(){
+  const r=drill.result;const sc=eaScore(r.ok,r.n);
+  const weak=Object.keys(r.cats).filter(c=>r.cats[c].ok<r.cats[c].n);
+  return '<div class="card" style="text-align:center"><p class="note">Score de la série</p><div class="score m">'+sc+'</div><p class="note">sur 200 · '+r.ok+' / '+r.n+' justes</p>'+
+  (weak.length?'<p style="text-align:left;margin-top:14px;font-size:.95rem"><b>À retravailler :</b> '+weak.map(c=>CATS[c].n+' ('+r.cats[c].ok+'/'+r.cats[c].n+')').join(' · ')+'</p>':'<p style="font-size:.95rem">Sans faute. Ces questions reviendront moins ; les catégories faibles, plus.</p>')+
+  '<button class="btn primary big" data-a="startdrill">Refaire une série</button><button class="btn ghost" data-a="gostats">Voir la progression</button></div>';
+}
+
+function casHome(){
+  return '<div class="card"><h2>Cas de la semaine</h2><p class="note">Un cas guidé, cinq décisions, chaque choix est noté : 2 pour le meilleur, 1 pour acceptable, 0 pour un piège. Les données arrivent après chaque choix, comme en séance. Un nouveau cas est ajouté chaque lundi.</p></div>'+
+  CASES.map(c=>{const r=S.cases[c.id];return '<div class="card"><h3 style="margin-top:0">'+c.title+' <span class="note" style="font-weight:400">· '+c.sub+'</span></h3>'+
+  (r?'<p class="note">Dernier résultat : <span class="m">'+r.score+' / '+r.max+'</span> le '+r.d+'</p>':'<p class="note">Pas encore fait</p>')+
+  '<button class="btn primary big" data-a="startcas" data-id="'+c.id+'">'+(r?'Refaire':'Commencer')+'</button></div>';}).join('');
+}
+function startCase(id){const c=CASES.find(x=>x.id===id);if(!c)return;cs={c,i:-1,picks:[],chosen:null,order:null};setView('casplay');}
+function casplay(){
+  const c=cs.c;
+  if(cs.i<0)return '<div class="card"><span class="pill soft">Cas</span><h2 style="margin-top:10px">'+c.title+'</h2><p class="brief">'+esc(c.brief)+'</p><button class="btn primary big" data-a="casnext">Commencer</button></div>';
+  const st=c.steps[cs.i],order=cs.order;
+  let h='<div class="card"><div class="step">'+c.title+' · étape '+(cs.i+1)+' / '+c.steps.length+'</div><h2>'+esc(st.q)+'</h2>';
+  order.forEach((oi,k)=>{const o=st.o[oi];let cls='opt';
+    if(cs.chosen!==null){if(k===cs.chosen)cls+=(o.s===2?' ok':o.s===1?' mid':' ko');else if(o.s===2)cls+=' ok';else cls+=' dim';}
+    h+='<button class="'+cls+'" data-a="caspick" data-k="'+k+'"'+(cs.chosen!==null?' disabled':'')+'>'+esc(o.t)+'</button>';});
+  if(cs.chosen!==null){const o=st.o[order[cs.chosen]];
+    h+='<div class="fb '+(o.s===2?'ok':o.s===1?'mid':'ko')+'"><b>'+(o.s===2?'Meilleur choix.':o.s===1?'Acceptable.':'Piège.')+'</b> '+esc(o.f)+'</div>';
+    if(o.s<2){const best=st.o.find(x=>x.s===2);h+='<p class="note"><b>Meilleur choix :</b> '+esc(best.f)+'</p>';}
+    if(st.d)h+='<div class="data">'+esc(st.d)+'</div>';
+    h+='<button class="btn primary big" data-a="casnext">'+(cs.i+1<c.steps.length?'Étape suivante':'Débrief')+'</button>';}
+  return h+'</div>';
+}
+function casNext(){
+  const c=cs.c;
+  if(cs.i+1<c.steps.length){cs.i++;cs.chosen=null;cs.order=shuffle([0,1,2,3]);setView('casplay');}
+  else{const score=cs.picks.reduce((s,p)=>s+p,0),max=2*c.steps.length;S.cases[c.id]={score,max,d:today(),picks:cs.picks};touchStreak();logEvent({k:'case',id:c.id,score,max});save();setView('casend');}
+}
+function casPick(k){if(!cs||cs.chosen!==null)return;cs.chosen=k;cs.picks.push(cs.c.steps[cs.i].o[cs.order[k]].s);render();}
+function casend(){
+  const c=cs.c,r=S.cases[c.id];
+  return '<div class="card" style="text-align:center"><p class="note">'+c.title+'</p><div class="score m">'+r.score+' / '+r.max+'</div>'+
+  '<p class="note">Étapes : '+r.picks.map(p=>p===2?'●':p===1?'◐':'○').join(' ')+'</p></div>'+
+  '<div class="card"><h2>Débrief</h2><p class="brief">'+esc(c.debrief)+'</p><button class="btn ghost" data-a="gocas">Retour aux cas</button></div>';
+}
+
+function stats(){
+  const n=S.history.reduce((s,h)=>s+h.n,0),ok=S.history.reduce((s,h)=>s+h.ok,0);
+  let h='<div class="tiles"><div class="tile"><div class="n m">'+S.sessions+'</div><div class="l">séries</div></div><div class="tile"><div class="n m">'+n+'</div><div class="l">questions</div></div><div class="tile"><div class="n m">'+(n?Math.round(100*ok/n)+' %':'—')+'</div><div class="l">réussite</div></div></div>';
+  if(S.history.length){h+='<div class="card"><h3 style="margin-top:0">Scores des dernières séries</h3><div class="hist">'+S.history.slice(-20).map(x=>'<i style="height:'+Math.max(5,(x.score-100))+'%" title="'+x.d+' · '+x.score+'"></i>').join('')+'</div></div>';}
+  h+='<div class="card bars"><h3 style="margin-top:0">Par catégorie</h3>';
+  for(const c in CATS){const s=S.cats[c];const a=s&&s.seen?Math.round(100*s.ok/s.seen):null;
+    h+='<div class="b"><div class="l"><span>'+CATS[c].n+'</span><span class="note m">'+(a===null?'—':a+' % · '+s.seen+' q')+'</span></div><div class="t"><i class="'+(a===null?'':a<60?'lo':a<80?'md':'')+'" style="width:'+(a||0)+'%"></i></div></div>';}
+  h+='</div>';
+  const ids=Object.keys(S.cases);
+  if(ids.length){h+='<div class="card"><h3 style="margin-top:0">Cas</h3>'+ids.map(id=>{const c=CASES.find(x=>x.id===id);const r=S.cases[id];return '<p style="font-size:.95rem">'+(c?c.title:id)+' : <b class="m">'+r.score+' / '+r.max+'</b> <span class="note">· '+r.d+'</span></p>';}).join('')+'</div>';}
+  h+='<div class="card"><h3 style="margin-top:0">Synchronisation</h3><p class="note">'+(syncMode==='db'?'Synchronisée via l\'artefact Claude.':syncMode==='api'?'Synchronisée avec le serveur : Claude lit directement ta progression en séance.':'Progression enregistrée dans ce navigateur. Entre le code de synchronisation (affiché à l\'installation du serveur) pour la retrouver sur tous tes appareils.')+'</p>'+
+  (syncMode==='db'?'':'<div class="row" style="align-items:flex-end"><div class="field" style="flex:1"><label for="sync-code">Code de synchronisation</label><input type="text" id="sync-code" value="'+syncToken().replace(/"/g,'&quot;')+'" autocomplete="off" placeholder="collé une seule fois"></div><button class="btn" id="sync-save">Activer</button></div>')+
+  '</div>'+
+  '<div class="card"><button class="btn ghost" data-a="reset" style="margin-top:0">Réinitialiser la progression</button></div>';
+  return h;
+}
+
+function bind(){
+  app.querySelectorAll('[data-a]').forEach(b=>{b.onclick=()=>{const a=b.dataset.a;
+    if(a==='startdrill')startDrill();else if(a==='ans')answer(+b.dataset.k);else if(a==='next')nextQ();
+    else if(a==='gocas'){cs=null;setView('cas');}else if(a==='gostats')setView('stats');
+    else if(a==='startcas')startCase(b.dataset.id);else if(a==='casnext')casNext();else if(a==='caspick')casPick(+b.dataset.k);
+    else if(a==='reset'){if(b.dataset.c){S=EMPTY();save();setView('stats');}else{b.textContent='Confirmer la réinitialisation';b.dataset.c='1';}}
+  };});
+  const ss=document.getElementById('sync-save');
+  if(ss)ss.onclick=()=>{setSyncToken(document.getElementById('sync-code').value);lastPushed='';initSync().then(()=>{if(view==='stats')render();});};
+}
+
+/* ===================== DÉMARRAGE ===================== */
+render();
+initSync();
+if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js').catch(()=>{});let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload();}});}catch(e){}}
+</script>
+</body>
+</html>
