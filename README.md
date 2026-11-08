@@ -17,6 +17,26 @@ Catégories du drill (une par erreur observée) : familles du Playbook, cadrage,
 
 Les données (questions, cas) sont en tête du `<script>` de `public/index.html`. Pour une question, la première option est la bonne réponse (les options sont mélangées à l'affichage). Pour un cas, chaque étape a exactement une option à `s:2`.
 
+## Rythme et engagement
+
+L'app applique, dans leur version utile à l'apprentissage, les techniques du playbook persuasion & influence :
+
+| Technique | Dans l'app |
+|---|---|
+| Identité (cohérence) | Phrase d'identité affichée en tête de la carte du jour, modifiable dans Progression |
+| Intention d'implémentation | Heure de la série + « juste après » une habitude existante ; rappelée chaque jour |
+| Engagement choisi | Objectif hebdomadaire fixé par l'utilisateur (3, 4 ou 5 séries), compteur visible |
+| Aversion à la perte, sans fragilité | Streak de jours actifs avec un joker par semaine |
+| Nouveau départ | Lundi : remise à zéro explicite de la semaine ; après 3 jours ou plus d'arrêt : série courte de 6 questions, sans dette |
+| Anti « foutu pour foutu » | À partir du jeudi, deux jours manqués ramènent l'objectif affiché à 3 séries au lieu de 5 |
+| Action prescrite | Le plan du jour est écrit (nombre de questions, ratées qui reviennent, catégorie faible), un seul bouton |
+| Boucle ouverte | Après la série : les ratées « reviennent demain » ; le cas de la semaine reste affiché tant qu'il n'est pas fait |
+| Récupération avant relecture | Récitation des 4 familles avant chaque série, auto-déclarée et journalisée |
+| Bilan écrit | Vendredi à dimanche : trois lignes (marché, bloqué, heure de la semaine prochaine), qui alimentent l'intention |
+| Redevabilité | La progression, le journal et le bilan sont lus par Claude chaque lundi |
+
+Volontairement absents : badges, récompenses aléatoires, rareté artificielle, notifications culpabilisantes.
+
 ## Structure
 
 ```

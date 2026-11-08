@@ -1,5 +1,5 @@
 /* Playbook Drill, service worker. Bumper VERSION à chaque publication. */
-const VERSION = 'playbook-drill-2026-11-09a';
+const VERSION = 'playbook-drill-2026-11-09b';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

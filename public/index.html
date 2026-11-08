@@ -267,16 +267,22 @@ debrief:"Le canal en ligne était l'hypothèse du fondateur ; une donnée gratui
 
 /* ===================== ÉTAT ===================== */
 const KEY='playbook-drill-s1';
-const EMPTY=()=>({v:1,sessions:0,streak:0,lastDay:null,cats:{},qs:{},history:[],cases:{},misses:[],log:[],updatedAt:0});
+const EMPTY=()=>({v:1,sessions:0,streak:0,lastDay:null,cats:{},qs:{},history:[],cases:{},misses:[],log:[],
+  identity:'',intent:{time:'',anchor:''},target:5,days:{},recite:{},reviews:{},updatedAt:0});
 const LOG_MAX=2000;
 let S=EMPTY();
-function load(){try{const raw=localStorage.getItem(KEY);if(raw){S={...EMPTY(),...JSON.parse(raw)};if(!Array.isArray(S.log))S.log=[];}}catch(e){}}
+function load(){try{const raw=localStorage.getItem(KEY);if(raw){S={...EMPTY(),...JSON.parse(raw)};if(!Array.isArray(S.log))S.log=[];if(!S.intent)S.intent={time:'',anchor:''};if(!S.days)S.days={};if(!S.recite)S.recite={};if(!S.reviews)S.reviews={};if(!S.target)S.target=5;}}catch(e){}}
 function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 function save(){S.updatedAt=Date.now();saveLocal();schedulePush();}
 function logEvent(ev){S.log.push({t:Date.now(),...ev});if(S.log.length>LOG_MAX)S.log.splice(0,S.log.length-LOG_MAX);}
 load();
-function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
-function dayDiff(a,b){if(!a||!b)return 99;return Math.round((new Date(b)-new Date(a))/86400000);}
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function today(){return iso(new Date());}
+function addDays(s,n){const d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return iso(d);}
+function dayDiff(a,b){if(!a||!b)return 99;return Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000);}
+function dow(s){return new Date(s+'T12:00:00').getDay();} // 0 = dimanche
+function mondayOf(s){const w=dow(s);return addDays(s,w===0?-6:1-w);}
+function weekKey(s){return 'W'+mondayOf(s);}
 
 /* ===================== SYNCHRONISATION =====================
    Deux canaux, comme EA Trainer :
@@ -340,10 +346,20 @@ async function initSync(){
   }catch(e){setSync('error',String(e&&e.message||e));}
 }
 
-/* ===================== LOGIQUE ===================== */
+/* ===================== LOGIQUE D'APPRENTISSAGE ===================== */
 function acc(c){const s=S.cats[c];if(!s||s.seen<2)return 0.5;return s.ok/s.seen;}
+// Questions ratées récemment (3 derniers jours) et pas réussies depuis : elles reviennent en priorité (clôture + espacement).
+function recentMisses(){
+  const t=today(),out=new Set();
+  S.misses.forEach(m=>{if(dayDiff(m.d,t)<=3)out.add(m.id);});
+  S.log.slice(-200).forEach(e=>{if(e.k==='q'&&e.ok&&out.has(e.id)){const m=S.misses.filter(x=>x.id===e.id).pop();if(m&&e.t>new Date(m.d+'T23:59:59').getTime())out.delete(e.id);}});
+  return out;
+}
 function pick(n){
-  const pool=Q.map(q=>{let w=1.3-acc(q.cat);const r=S.qs[q.id];if(r&&S.sessions-r.last<3)w*=0.3;if(r&&r.seen>=2&&r.ok===r.seen)w*=0.6;return{q,w};});
+  const rm=recentMisses();
+  const pool=Q.map(q=>{let w=1.3-acc(q.cat);const r=S.qs[q.id];
+    if(rm.has(q.id))w*=2.5;else{if(r&&S.sessions-r.last<3)w*=0.3;if(r&&r.seen>=2&&r.ok===r.seen)w*=0.6;}
+    return{q,w};});
   const out=[],cnt={};
   while(out.length<n&&pool.length){
     const tot=pool.reduce((s,p)=>s+p.w,0);let r=Math.random()*tot,i=0;
@@ -356,49 +372,108 @@ function pick(n){
 function shuffle(a){const b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
 function eaScore(ok,n){return n?100+Math.round(100*ok/n):null;}
 function weakest(){let w=null,v=2;for(const c in CATS){const s=S.cats[c];if(!s||s.seen<2)continue;const a=s.ok/s.seen;if(a<v){v=a;w=c;}}return w;}
-function touchStreak(){const t=today();if(S.lastDay===t)return;const d=dayDiff(S.lastDay,t);S.streak=(d===1)?S.streak+1:1;S.lastDay=t;}
-function doneToday(){const t=today();return S.history.some(h=>h.d===t);}
+function mastered(){return Object.keys(CATS).filter(c=>{const s=S.cats[c];return s&&s.seen>=6&&s.ok/s.seen>=0.8;}).length;}
+
+/* ===================== RYTHME ET ENGAGEMENT =====================
+   Techniques reprises du playbook persuasion & influence, dans leur version utile à l'apprentissage :
+   identité, intention d'implémentation, objectif hebdomadaire choisi, streak avec joker, reprise sans dette,
+   bilan écrit du vendredi, prochaine action prescrite, erreurs qui reviennent, lecture par Claude le lundi. */
+function activeDay(s){const d=S.days[s];return !!(d&&(d.drill||d.case));}
+function markDay(kind){const t=today();S.days[t]=S.days[t]||{drill:0,case:0};S.days[t][kind]++;S.lastDay=t;S.streak=streak();}
+function streak(){ // jours consécutifs avec activité ; un jour manqué par semaine est pardonné (joker)
+  const t=today();let d=activeDay(t)?t:addDays(t,-1),n=0,jok={};
+  for(let i=0;i<400;i++){
+    if(activeDay(d)){n++;}else{const wk=weekKey(d);if(!jok[wk]&&n>0){jok[wk]=true;}else break;}
+    d=addDays(d,-1);
+  }
+  return n;
+}
+function weekDone(){const m=mondayOf(today());let n=0;for(let i=0;i<7;i++){const s=addDays(m,i);if(S.days[s]&&S.days[s].drill)n++;}return n;}
+function gapDays(){return S.lastDay?dayDiff(S.lastDay,today()):0;}
+function doneToday(){const d=S.days[today()];return !!(d&&d.drill);}
+function weekCaseDone(){const m=mondayOf(today());return Object.values(S.cases).some(r=>r.d>=m);}
+function planN(){return (S.lastDay&&gapDays()>=3)?6:10;}
+function reciteRate(){const v=Object.values(S.recite);if(!v.length)return null;return Math.round(100*v.filter(x=>x==='all').length/v.length);}
 
 /* ===================== VUES ===================== */
 const app=document.getElementById('app');
-let view='home',drill=null,cs=null,timerId=null;
-const TABS=['home','drill','cas','stats'];
+let view='home',drill=null,cs=null,timerId=null,reciteMiss=false;
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 function setView(v){view=v;if(timerId){clearInterval(timerId);timerId=null;}render();}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{drill=null;cs=null;setView(b.dataset.v);});
-const TAB_OF={home:'home',drill:'drill',drillq:'drill',drillend:'drill',cas:'cas',casplay:'cas',casend:'cas',stats:'stats'};
+const TAB_OF={home:'home',drill:'drill',recite:'drill',drillq:'drill',drillend:'drill',cas:'cas',casplay:'cas',casend:'cas',stats:'stats'};
+const FAM='<ul style="font-size:.95rem;margin-top:8px">'+
+  '<li><b>Cadrage</b> : quelle est la question causale, indépendamment de la solution proposée ?</li>'+
+  '<li><b>Falsifiabilité</b> : quelle donnée tuerait mon hypothèse, et explique-t-elle tous les faits avec un seul récit ?</li>'+
+  '<li><b>Qualité de la donnée</b> : que contient exactement ce chiffre, et masque-t-il un sous-groupe ?</li>'+
+  '<li><b>Séquençage</b> : qu\'est-ce que je dois éliminer, gratuitement, avant de comparer ?</li></ul>';
+const ID_DEFAULT='Je suis quelqu\'un qui fait sa série même les jours sans envie : c\'est sur le plateau que ça se joue.';
 
 function render(){
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===TAB_OF[view])));
-  const f={home,drill:drillHome,drillq,drillend,cas:casHome,casplay,casend,stats}[view]||home;
+  const f={home,drill:drillHome,recite,drillq,drillend,cas:casHome,casplay,casend,stats}[view]||home;
   app.innerHTML=f();bind();window.scrollTo(0,0);
 }
 
 function home(){
-  const w=weakest();const last=S.history[S.history.length-1];
-  const n=S.history.reduce((s,h)=>s+h.n,0),ok=S.history.reduce((s,h)=>s+h.ok,0);const done=doneToday();
-  return '<div class="tiles"><div class="tile"><div class="n">'+S.streak+'</div><div class="l">jour'+(S.streak>1?'s':'')+' de suite</div></div>'+
-  '<div class="tile"><div class="n m">'+(last?last.score:'—')+'</div><div class="l">dernier score / 200</div></div>'+
-  '<div class="tile"><div class="n m">'+(n?Math.round(100*ok/n)+' %':'—')+'</div><div class="l">réussite globale</div></div></div>'+
-  '<div class="card'+(done?'':' accent')+'"><h2>'+(done?'Série du jour faite':'Série du jour')+'</h2>'+
-  (w?'<p class="note">Point faible actuel : <b>'+CATS[w].n+'</b> ('+Math.round(100*acc(w))+' %). La série insiste dessus.</p>':'<p class="note">Les deux premières séries calibrent tes points faibles ; la sélection devient adaptative ensuite.</p>')+
-  '<button class="btn primary big" data-a="startdrill">'+(done?'Refaire une série':'Drill · 10 questions')+'</button>'+
-  '<button class="btn ghost" data-a="gocas">Cas de la semaine</button></div>'+
-  '<div class="card"><h2>Les 4 familles</h2><p class="note">À réciter avant la série, sans lire. Puis vérifier.</p><details><summary>Vérifier</summary><ul style="font-size:.95rem;margin-top:8px">'+
-  '<li><b>Cadrage</b> : quelle est la question causale, indépendamment de la solution proposée ?</li>'+
-  '<li><b>Falsifiabilité</b> : quelle donnée tuerait mon hypothèse, et explique-t-elle tous les faits avec un seul récit ?</li>'+
-  '<li><b>Qualité de la donnée</b> : que contient exactement ce chiffre, et masque-t-il un sous-groupe ?</li>'+
-  '<li><b>Séquençage</b> : qu\'est-ce que je dois éliminer, gratuitement, avant de comparer ?</li></ul></details></div>';
+  const t=today(),w=weakest(),last=S.history[S.history.length-1],done=doneToday(),gap=gapDays(),n=planN();
+  const wd=weekDone(),target=S.target||5,dw=dow(t),rm=recentMisses().size,wk=weekKey(t);
+  const identity=S.identity||ID_DEFAULT;const it=S.intent||{};
+  const intentLine=it.time?'Série à <b>'+esc(it.time)+'</b>'+(it.anchor?', juste après <b>'+esc(it.anchor)+'</b>':'')+'.':'';
+  // Objectif adaptatif : jeudi ou plus tard avec deux jours manqués, on vise 3, pas 5 (éviter l'abandon « foutu pour foutu »).
+  const behind=(dw===0||dw>=4)&&wd<(dw===0?5:dw-2)&&target>3;
+  let h='<div class="tiles"><div class="tile"><div class="n m">'+S.streak+'</div><div class="l">jour'+(S.streak>1?'s':'')+' de suite · 1 joker/sem.</div></div>'+
+  '<div class="tile"><div class="n m">'+wd+' / '+target+'</div><div class="l">séries cette semaine</div></div>'+
+  '<div class="tile"><div class="n m">'+(last?last.score:'—')+'</div><div class="l">dernier score / 200</div></div></div>';
+  // Carte du jour
+  h+='<div class="card'+(done?'':' accent')+'"><p style="font-family:var(--display);font-weight:600;font-size:1.05rem;line-height:1.35;margin-bottom:6px">'+esc(identity)+'</p>'+
+  '<p class="note">'+(intentLine||'Fixe l\'heure de ta série dans Progression : une intention écrite (heure + juste après quoi) double les chances qu\'elle ait lieu.')+'</p>';
+  if(dw===1&&!done)h+='<p class="note"><b>Nouvelle semaine.</b> Objectif choisi : '+target+' séries. Ce qui s\'est passé la semaine dernière ne compte plus.</p>';
+  if(behind&&!done)h+='<p class="note"><b>Deux jours manqués</b> : vise 3 séries cette semaine, pas '+target+'. Trois tenues valent mieux que cinq abandonnées.</p>';
+  if(done){
+    h+='<p><b>Série faite.</b> '+(weekCaseDone()?'Le cas de la semaine aussi. Rien d\'autre à faire aujourd\'hui.':'Il reste le <b>cas de la semaine</b>, cinq décisions, dix minutes.')+'</p>'+
+    (weekCaseDone()?'':'<button class="btn primary big" data-a="gocas">Cas de la semaine</button>')+'<button class="btn ghost" data-a="startdrill">Refaire une série (hors compteur)</button>';
+  }else{
+    if(S.lastDay&&gap>=3)h+='<p><b>Reprise après '+gap+' jours.</b> Série courte de 6 questions. Le but est de revenir, pas de rattraper.</p>';
+    h+='<p><b>Aujourd\'hui :</b> '+n+' questions'+(rm?', dont <b>'+rm+' ratée'+(rm>1?'s':'')+' récemment</b> qui reviennent':'')+(w?', accent sur <b>'+CATS[w].n+'</b> ('+Math.round(100*acc(w))+' %)':'')+'.'+(dw>=4&&!weekCaseDone()?' Puis le cas de la semaine.':'')+'</p>'+
+    '<button class="btn primary big" data-a="startdrill">Lancer la série</button>';
+  }
+  h+='</div>';
+  // Bilan du vendredi (vendredi, samedi, dimanche), trois lignes
+  if((dw===5||dw===6||dw===0)&&!S.reviews[wk]&&S.sessions>0){
+    h+='<div class="card accent"><h2>Bilan de la semaine</h2><p class="note">Trois lignes, pas plus. Le bilan écrit est ce qui transforme une semaine passée en semaine suivante meilleure. Claude le lit lundi.</p>'+
+    '<div class="field"><label for="rv-worked">Ce qui a marché</label><input type="text" id="rv-worked" placeholder="ex. la série juste après le café"></div>'+
+    '<div class="field" style="margin-top:8px"><label for="rv-blocked">Ce qui a bloqué</label><input type="text" id="rv-blocked" placeholder="ex. mardi et jeudi, soirées prises"></div>'+
+    '<div class="field" style="margin-top:8px"><label for="rv-next">Heure de la série la semaine prochaine</label><input type="text" id="rv-next" value="'+esc(it.time||'')+'" placeholder="ex. 7 h 30"></div>'+
+    '<button class="btn primary big" id="rv-save">Enregistrer le bilan</button></div>';
+  }else if(S.reviews[wk]){
+    const r=S.reviews[wk];h+='<div class="card"><h3 style="margin-top:0">Bilan de la semaine</h3><p class="note">Marché : '+esc(r.worked||'–')+'. Bloqué : '+esc(r.blocked||'–')+'.</p></div>';
+  }
+  h+='<div class="card"><h3 style="margin-top:0">Les 4 familles</h3><p class="note">Récitées avant chaque série, vérifiées ici.'+(reciteRate()!==null?' Sans faute '+reciteRate()+' % des jours.':'')+'</p><details><summary>Vérifier</summary>'+FAM+'</details></div>'+
+  '<p class="note" style="text-align:center">Lu par Claude chaque lundi : séries, erreurs, cas, bilan.</p>';
+  return h;
 }
 
 function drillHome(){
-  return '<div class="card"><h2>Drill</h2><p class="note">10 questions chronométrées, une seule bonne réponse, correction immédiate. Les catégories où tu échoues reviennent plus souvent ; les questions vues récemment, moins. Score sur le modèle EA, de 100 à 200.</p>'+
+  return '<div class="card"><h2>Drill</h2><p class="note">10 questions chronométrées, une seule bonne réponse, correction immédiate. Les questions ratées ces trois derniers jours reviennent en priorité ; les catégories faibles plus souvent ; les questions vues récemment, moins. Score sur le modèle EA, de 100 à 200.</p>'+
   '<button class="btn primary big" data-a="startdrill">Commencer</button></div>'+
   '<div class="card"><h3 style="margin-top:0">Catégories</h3><p class="note">Chacune correspond à une erreur observée en séance.</p><ul style="font-size:.95rem">'+Object.keys(CATS).map(c=>'<li>'+CATS[c].n+'</li>').join('')+'</ul></div>';
 }
+// Récitation avant la série : récupération en mémoire, pas relecture. Honnêteté demandée, le résultat est journalisé.
+function recite(){
+  if(S.recite[today()]&&!reciteMiss){return '';}
+  return '<div class="card"><span class="pill soft">Avant la série</span><h2 style="margin-top:10px">Récite les 4 familles</h2><p>Dans ta tête ou à voix basse : le nom de chaque famille et la question qu\'elle impose. Sans lire.</p>'+
+  (reciteMiss?'<div class="fb mid"><b>Les voici.</b> Relis-les une fois, puis lance la série.'+FAM+'</div><button class="btn primary big" data-a="recite-go">Lancer la série</button>'
+  :'<button class="btn primary big" data-a="recite-all">Je les ai toutes les quatre</button><button class="btn ghost" data-a="recite-miss">Il m\'en manque</button>');
+}
 function startDrill(){
-  const qs=pick(10).map(q=>({q,order:shuffle([0,1,2,3]),ans:null,ok:false,timeout:false}));
-  drill={qs,i:0,left:0,answered:false,total:0};
+  reciteMiss=false;
+  if(S.recite[today()]){startDrillNow();return;}
+  setView('recite');
+}
+function startDrillNow(){
+  const qs=pick(planN()).map(q=>({q,order:shuffle([0,1,2,3]),ans:null,ok:false,timeout:false}));
+  drill={qs,i:0,left:0,answered:false,total:0,counted:!doneToday()};
   setView('drillq');startTimer();
 }
 function startTimer(){
@@ -432,7 +507,7 @@ function nextQ(){
   else endDrill();
 }
 function endDrill(){
-  touchStreak();S.sessions++;
+  S.sessions++;
   let ok=0;const cats={};const d=today();
   drill.qs.forEach(it=>{
     const c=it.q.cat;S.cats[c]=S.cats[c]||{seen:0,ok:0};S.cats[c].seen++;cats[c]=cats[c]||{n:0,ok:0};cats[c].n++;
@@ -444,16 +519,18 @@ function endDrill(){
   if(S.misses.length>80)S.misses=S.misses.slice(-80);
   S.history.push({d,n:drill.qs.length,ok,score:eaScore(ok,drill.qs.length),cats});
   if(S.history.length>60)S.history=S.history.slice(-60);
-  drill.result={ok,n:drill.qs.length,cats};
+  markDay('drill');
+  drill.result={ok,n:drill.qs.length,cats,wd:weekDone()};
   logEvent({k:'drill',ok,n:drill.qs.length});
   save();setView('drillend');
 }
 function drillend(){
-  const r=drill.result;const sc=eaScore(r.ok,r.n);
-  const weak=Object.keys(r.cats).filter(c=>r.cats[c].ok<r.cats[c].n);
+  const r=drill.result;const sc=eaScore(r.ok,r.n);const target=S.target||5;
+  const weak=Object.keys(r.cats).filter(c=>r.cats[c].ok<r.cats[c].n);const missed=r.n-r.ok;
   return '<div class="card" style="text-align:center"><p class="note">Score de la série</p><div class="score m">'+sc+'</div><p class="note">sur 200 · '+r.ok+' / '+r.n+' justes</p>'+
-  (weak.length?'<p style="text-align:left;margin-top:14px;font-size:.95rem"><b>À retravailler :</b> '+weak.map(c=>CATS[c].n+' ('+r.cats[c].ok+'/'+r.cats[c].n+')').join(' · ')+'</p>':'<p style="font-size:.95rem">Sans faute. Ces questions reviendront moins ; les catégories faibles, plus.</p>')+
-  '<button class="btn primary big" data-a="startdrill">Refaire une série</button><button class="btn ghost" data-a="gostats">Voir la progression</button></div>';
+  (weak.length?'<p style="text-align:left;margin-top:14px;font-size:.95rem"><b>À retravailler :</b> '+weak.map(c=>CATS[c].n+' ('+r.cats[c].ok+'/'+r.cats[c].n+')').join(' · ')+'. Les '+missed+' ratée'+(missed>1?'s':'')+' reviennent demain.</p>':'<p style="font-size:.95rem">Sans faute. Ces questions reviendront moins ; les catégories faibles, plus.</p>')+
+  '<p class="note">'+(r.wd>=target?'Objectif de la semaine atteint : '+r.wd+' / '+target+'.':'Semaine : '+r.wd+' / '+target+' séries.')+(weekCaseDone()?'':' Le cas de la semaine reste à faire.')+'</p>'+
+  (weekCaseDone()?'':'<button class="btn primary big" data-a="gocas">Cas de la semaine</button>')+'<button class="btn ghost" data-a="gostats">Voir la progression</button></div>';
 }
 
 function casHome(){
@@ -481,7 +558,7 @@ function casplay(){
 function casNext(){
   const c=cs.c;
   if(cs.i+1<c.steps.length){cs.i++;cs.chosen=null;cs.order=shuffle([0,1,2,3]);setView('casplay');}
-  else{const score=cs.picks.reduce((s,p)=>s+p,0),max=2*c.steps.length;S.cases[c.id]={score,max,d:today(),picks:cs.picks};touchStreak();logEvent({k:'case',id:c.id,score,max});save();setView('casend');}
+  else{const score=cs.picks.reduce((s,p)=>s+p,0),max=2*c.steps.length;S.cases[c.id]={score,max,d:today(),picks:cs.picks};markDay('case');logEvent({k:'case',id:c.id,score,max});save();setView('casend');}
 }
 function casPick(k){if(!cs||cs.chosen!==null)return;cs.chosen=k;cs.picks.push(cs.c.steps[cs.i].o[cs.order[k]].s);render();}
 function casend(){
@@ -492,8 +569,9 @@ function casend(){
 }
 
 function stats(){
-  const n=S.history.reduce((s,h)=>s+h.n,0),ok=S.history.reduce((s,h)=>s+h.ok,0);
+  const n=S.history.reduce((s,h)=>s+h.n,0),ok=S.history.reduce((s,h)=>s+h.ok,0);const it=S.intent||{};const m=mastered();
   let h='<div class="tiles"><div class="tile"><div class="n m">'+S.sessions+'</div><div class="l">séries</div></div><div class="tile"><div class="n m">'+n+'</div><div class="l">questions</div></div><div class="tile"><div class="n m">'+(n?Math.round(100*ok/n)+' %':'—')+'</div><div class="l">réussite</div></div></div>';
+  h+='<div class="card"><h3 style="margin-top:0">Palier Bloc 2</h3><p class="note">Condition de passage : les 8 catégories à 80 % ou plus, sur au moins 6 questions chacune. Aujourd\'hui : <b class="m">'+m+' / 8</b>.</p><div class="bars"><div class="b"><div class="t"><i style="width:'+(100*m/8)+'%"></i></div></div></div></div>';
   if(S.history.length){h+='<div class="card"><h3 style="margin-top:0">Scores des dernières séries</h3><div class="hist">'+S.history.slice(-20).map(x=>'<i style="height:'+Math.max(5,(x.score-100))+'%" title="'+x.d+' · '+x.score+'"></i>').join('')+'</div></div>';}
   h+='<div class="card bars"><h3 style="margin-top:0">Par catégorie</h3>';
   for(const c in CATS){const s=S.cats[c];const a=s&&s.seen?Math.round(100*s.ok/s.seen):null;
@@ -501,6 +579,16 @@ function stats(){
   h+='</div>';
   const ids=Object.keys(S.cases);
   if(ids.length){h+='<div class="card"><h3 style="margin-top:0">Cas</h3>'+ids.map(id=>{const c=CASES.find(x=>x.id===id);const r=S.cases[id];return '<p style="font-size:.95rem">'+(c?c.title:id)+' : <b class="m">'+r.score+' / '+r.max+'</b> <span class="note">· '+r.d+'</span></p>';}).join('')+'</div>';}
+  // Engagement
+  h+='<div class="card"><h3 style="margin-top:0">Mon engagement</h3>'+
+  '<div class="field"><label for="id-line">Ma phrase d\'identité</label><input type="text" id="id-line" value="'+esc(S.identity||'').replace(/"/g,'&quot;')+'" placeholder="'+ID_DEFAULT.replace(/"/g,'&quot;')+'"></div>'+
+  '<div class="row" style="margin-top:8px"><div class="field" style="flex:1"><label for="it-time">Heure de la série</label><input type="text" id="it-time" value="'+esc(it.time||'').replace(/"/g,'&quot;')+'" placeholder="7 h 30"></div>'+
+  '<div class="field" style="flex:2"><label for="it-anchor">Juste après… (une habitude déjà en place)</label><input type="text" id="it-anchor" value="'+esc(it.anchor||'').replace(/"/g,'&quot;')+'" placeholder="le café, le trajet, le dîner"></div></div>'+
+  '<div class="field" style="margin-top:8px"><label>Séries par semaine, choisies par toi</label><div class="row">'+[3,4,5].map(k=>'<button class="btn'+((S.target||5)===k?' primary':'')+'" data-a="target" data-k="'+k+'">'+k+'</button>').join('')+'</div></div>'+
+  '<button class="btn primary big" id="eng-save">Enregistrer</button>'+
+  (reciteRate()!==null?'<p class="note" style="margin-top:10px">Familles récitées sans faute : '+reciteRate()+' % des jours.</p>':'')+'</div>';
+  const rk=Object.keys(S.reviews).sort().pop();
+  if(rk){const r=S.reviews[rk];h+='<div class="card"><h3 style="margin-top:0">Dernier bilan</h3><p class="note">Marché : '+esc(r.worked||'–')+'<br>Bloqué : '+esc(r.blocked||'–')+'<br>Heure retenue : '+esc(r.next||'–')+'</p></div>';}
   h+='<div class="card"><h3 style="margin-top:0">Synchronisation</h3><p class="note">'+(syncMode==='db'?'Synchronisée via l\'artefact Claude.':syncMode==='api'?'Synchronisée avec le serveur : Claude lit directement ta progression en séance.':'Progression enregistrée dans ce navigateur. Entre le code de synchronisation (affiché à l\'installation du serveur) pour la retrouver sur tous tes appareils.')+'</p>'+
   (syncMode==='db'?'':'<div class="row" style="align-items:flex-end"><div class="field" style="flex:1"><label for="sync-code">Code de synchronisation</label><input type="text" id="sync-code" value="'+syncToken().replace(/"/g,'&quot;')+'" autocomplete="off" placeholder="collé une seule fois"></div><button class="btn" id="sync-save">Activer</button></div>')+
   '</div>'+
@@ -511,15 +599,25 @@ function stats(){
 function bind(){
   app.querySelectorAll('[data-a]').forEach(b=>{b.onclick=()=>{const a=b.dataset.a;
     if(a==='startdrill')startDrill();else if(a==='ans')answer(+b.dataset.k);else if(a==='next')nextQ();
+    else if(a==='recite-all'){S.recite[today()]='all';logEvent({k:'recite',r:'all'});save();startDrillNow();}
+    else if(a==='recite-miss'){S.recite[today()]='partial';logEvent({k:'recite',r:'partial'});save();reciteMiss=true;render();}
+    else if(a==='recite-go'){reciteMiss=false;startDrillNow();}
     else if(a==='gocas'){cs=null;setView('cas');}else if(a==='gostats')setView('stats');
     else if(a==='startcas')startCase(b.dataset.id);else if(a==='casnext')casNext();else if(a==='caspick')casPick(+b.dataset.k);
+    else if(a==='target'){S.target=+b.dataset.k;save();render();}
     else if(a==='reset'){if(b.dataset.c){S=EMPTY();save();setView('stats');}else{b.textContent='Confirmer la réinitialisation';b.dataset.c='1';}}
   };});
   const ss=document.getElementById('sync-save');
   if(ss)ss.onclick=()=>{setSyncToken(document.getElementById('sync-code').value);lastPushed='';initSync().then(()=>{if(view==='stats')render();});};
+  const es=document.getElementById('eng-save');
+  if(es)es.onclick=()=>{S.identity=document.getElementById('id-line').value.trim();S.intent={time:document.getElementById('it-time').value.trim(),anchor:document.getElementById('it-anchor').value.trim()};logEvent({k:'engage'});save();es.textContent='Enregistré';setTimeout(()=>{if(view==='stats')render();},700);};
+  const rs=document.getElementById('rv-save');
+  if(rs)rs.onclick=()=>{const wk=weekKey(today());S.reviews[wk]={worked:document.getElementById('rv-worked').value.trim(),blocked:document.getElementById('rv-blocked').value.trim(),next:document.getElementById('rv-next').value.trim(),at:Date.now()};
+    const nx=S.reviews[wk].next;if(nx)S.intent={time:nx,anchor:(S.intent||{}).anchor||''};logEvent({k:'review',wk});save();render();};
 }
 
 /* ===================== DÉMARRAGE ===================== */
+S.streak=streak();
 render();
 initSync();
 if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js').catch(()=>{});let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloaded){reloaded=true;location.reload();}});}catch(e){}}
